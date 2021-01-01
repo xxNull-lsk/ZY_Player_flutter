@@ -8,6 +8,39 @@ part of 'player_hot.dart';
 
 PlayerHot _$PlayerHotFromJson(Map<String, dynamic> json) {
   return PlayerHot(
+    (json['swiper'] as List)
+        ?.map((e) =>
+            e == null ? null : SwiperList.fromJson(e as Map<String, dynamic>))
+        ?.toList(),
+    (json['types'] as List)
+        ?.map(
+            (e) => e == null ? null : Types.fromJson(e as Map<String, dynamic>))
+        ?.toList(),
+  );
+}
+
+Map<String, dynamic> _$PlayerHotToJson(PlayerHot instance) => <String, dynamic>{
+      'swiper': instance.swipera,
+      'types': instance.types,
+    };
+
+SwiperList _$SwiperListFromJson(Map<String, dynamic> json) {
+  return SwiperList(
+    json['url'] as String,
+    json['cover'] as String,
+    json['title'] as String,
+  );
+}
+
+Map<String, dynamic> _$SwiperListToJson(SwiperList instance) =>
+    <String, dynamic>{
+      'url': instance.url,
+      'cover': instance.cover,
+      'title': instance.title,
+    };
+
+Types _$TypesFromJson(Map<String, dynamic> json) {
+  return Types(
     json['type'] as String,
     (json['playlist'] as List)
         ?.map((e) =>
@@ -16,23 +49,27 @@ PlayerHot _$PlayerHotFromJson(Map<String, dynamic> json) {
   );
 }
 
-Map<String, dynamic> _$PlayerHotToJson(PlayerHot instance) => <String, dynamic>{
+Map<String, dynamic> _$TypesToJson(Types instance) => <String, dynamic>{
       'type': instance.type,
       'playlist': instance.playlist,
     };
 
 Playlist _$PlaylistFromJson(Map<String, dynamic> json) {
   return Playlist(
-    json['url'] as String,
-    json['title'] as String,
     json['cover'] as String,
-    json['gengxin'] as String,
+    json['url'] as String,
+    json['bofang'] as String,
+    json['qingxi'] as String,
+    json['title'] as String,
+    json['pingfen'] as String,
   );
 }
 
 Map<String, dynamic> _$PlaylistToJson(Playlist instance) => <String, dynamic>{
-      'url': instance.url,
-      'title': instance.title,
       'cover': instance.cover,
-      'gengxin': instance.gengxin,
+      'url': instance.url,
+      'bofang': instance.bofang,
+      'qingxi': instance.qingxi,
+      'title': instance.title,
+      'pingfen': instance.pingfen,
     };

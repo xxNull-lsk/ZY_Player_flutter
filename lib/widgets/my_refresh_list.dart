@@ -1,9 +1,8 @@
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
-
 import 'package:ZY_Player_flutter/res/resources.dart';
 import 'package:ZY_Player_flutter/util/theme_utils.dart';
 import 'package:ZY_Player_flutter/widgets/state_layout.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 /// 封装下拉刷新与加载更多
@@ -12,9 +11,11 @@ class DeerListView extends StatefulWidget {
       {Key key,
       @required this.itemCount,
       @required this.itemBuilder,
-      @required this.onRefresh,
+      this.physics = const BouncingScrollPhysics(),
       this.loadMore,
+      this.onRefresh,
       this.hasMore = false,
+      this.hasRefresh = true,
       this.stateType = StateType.empty,
       this.pageSize = 10,
       this.padding,
@@ -26,6 +27,8 @@ class DeerListView extends StatefulWidget {
   final LoadMoreCallback loadMore;
   final int itemCount;
   final bool hasMore;
+  final bool hasRefresh;
+  final dynamic physics;
   final IndexedWidgetBuilder itemBuilder;
   final StateType stateType;
   final Axis scrollDirection;
@@ -50,43 +53,74 @@ class _DeerListViewState extends State<DeerListView> {
 
   @override
   Widget build(BuildContext context) {
-    Widget child = RefreshIndicator(
-      onRefresh: widget.onRefresh,
-      child: widget.itemCount == 0
-          ? StateLayout(
-              type: widget.stateType,
-              onRefresh: widget.onRefresh,
-            )
-          : AnimationLimiter(
-              child: ListView.builder(
-                scrollDirection: widget.scrollDirection,
-                itemCount: widget.loadMore == null ? widget.itemCount : widget.itemCount + 1,
-                padding: widget.padding,
-                itemExtent: widget.itemExtent,
-                itemBuilder: (BuildContext context, int index) {
-                  /// 不需要加载更多则不需要添加FootView
-                  if (widget.loadMore == null) {
-                    return widget.itemBuilder(context, index);
-                  } else {
-                    return index < widget.itemCount
-                        ? widget.itemBuilder(context, index)
-                        : MoreWidget(widget.itemCount, widget.hasMore, widget.pageSize);
-                  }
-                },
+    Widget child;
+    if (widget.hasRefresh) {
+      child = RefreshIndicator(
+        onRefresh: widget.onRefresh,
+        child: widget.itemCount == 0
+            ? StateLayout(
+                type: widget.stateType,
+                onRefresh: widget.onRefresh,
+              )
+            : AnimationLimiter(
+                child: ListView.builder(
+                  scrollDirection: widget.scrollDirection,
+                  physics: widget.physics,
+                  itemCount: widget.loadMore == null ? widget.itemCount : widget.itemCount + 1,
+                  padding: widget.padding,
+                  itemExtent: widget.itemExtent,
+                  itemBuilder: (BuildContext context, int index) {
+                    /// 不需要加载更多则不需要添加FootView
+                    if (widget.loadMore == null) {
+                      return widget.itemBuilder(context, index);
+                    } else {
+                      return index < widget.itemCount
+                          ? widget.itemBuilder(context, index)
+                          : MoreWidget(widget.itemCount, widget.hasMore, widget.pageSize);
+                    }
+                  },
+                ),
               ),
-            ),
-    );
-    return SafeArea(
-      child: NotificationListener(
-        onNotification: (ScrollEndNotification note) {
-          /// 确保是垂直方向滚动，且滑动至底部
-          if (note.metrics.pixels == note.metrics.maxScrollExtent && note.metrics.axis == Axis.vertical) {
-            _loadMore();
-          }
-          return true;
-        },
-        child: child,
-      ),
+      );
+    } else {
+      child = Container(
+        child: widget.itemCount == 0
+            ? StateLayout(
+                type: widget.stateType,
+                onRefresh: widget.onRefresh,
+              )
+            : AnimationLimiter(
+                child: ListView.builder(
+                  scrollDirection: widget.scrollDirection,
+                  physics: widget.physics,
+                  itemCount: widget.loadMore == null ? widget.itemCount : widget.itemCount + 1,
+                  padding: widget.padding,
+                  itemExtent: widget.itemExtent,
+                  itemBuilder: (BuildContext context, int index) {
+                    /// 不需要加载更多则不需要添加FootView
+                    if (widget.loadMore == null) {
+                      return widget.itemBuilder(context, index);
+                    } else {
+                      return index < widget.itemCount
+                          ? widget.itemBuilder(context, index)
+                          : MoreWidget(widget.itemCount, widget.hasMore, widget.pageSize);
+                    }
+                  },
+                ),
+              ),
+      );
+    }
+
+    return NotificationListener(
+      onNotification: (ScrollEndNotification note) {
+        /// 确保是垂直方向滚动，且滑动至底部
+        if (note.metrics.pixels == note.metrics.maxScrollExtent && note.metrics.axis == Axis.vertical) {
+          _loadMore();
+        }
+
+        return false;
+      },
+      child: child,
     );
   }
 

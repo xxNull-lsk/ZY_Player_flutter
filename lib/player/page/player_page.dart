@@ -1,17 +1,20 @@
+import 'dart:convert';
+
 import 'package:ZY_Player_flutter/model/player_hot.dart';
-import 'package:ZY_Player_flutter/net/dio_utils.dart';
-import 'package:ZY_Player_flutter/net/http_api.dart';
 import 'package:ZY_Player_flutter/player/player_router.dart';
-import 'package:ZY_Player_flutter/provider/base_list_provider.dart';
+import 'package:ZY_Player_flutter/player/provider/player_provider.dart';
+import 'package:ZY_Player_flutter/player/widget/player_list_page.dart';
+import 'package:ZY_Player_flutter/player/widget/zhibo_list_page.dart';
+import 'package:ZY_Player_flutter/res/colors.dart';
+import 'package:ZY_Player_flutter/res/dimens.dart';
+import 'package:ZY_Player_flutter/res/styles.dart';
 import 'package:ZY_Player_flutter/routes/fluro_navigator.dart';
-import 'package:ZY_Player_flutter/util/persistent_header_delegate.dart';
-import 'package:ZY_Player_flutter/util/toast.dart';
+import 'package:ZY_Player_flutter/util/theme_utils.dart';
 import 'package:ZY_Player_flutter/widgets/load_image.dart';
-import 'package:ZY_Player_flutter/widgets/my_refresh_list.dart';
-import 'package:ZY_Player_flutter/widgets/state_layout.dart';
 import 'package:flustars/flustars.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:flutter_swiper/flutter_swiper.dart';
 import 'package:provider/provider.dart';
 
 class PlayerPage extends StatefulWidget {
@@ -24,165 +27,113 @@ class PlayerPage extends StatefulWidget {
 class _PlayerPageState extends State<PlayerPage> with AutomaticKeepAliveClientMixin<PlayerPage>, SingleTickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
-  BaseListProvider<PlayerHot> _baseListProvider = BaseListProvider();
+  TabController _tabController;
+  PageController _pageController;
 
   @override
   void initState() {
     super.initState();
-    _onRefresh();
-  }
-
-  Future getData() async {
-    _baseListProvider.setStateType(StateType.loading);
-    await DioUtils.instance.requestNetwork(
-      Method.get,
-      HttpApi.getHotList,
-      onSuccess: (data) {
-        List.generate(data.length, (i) => _baseListProvider.list.add(PlayerHot.fromJson(data[i])));
-        if (data.length == 0) {
-          _baseListProvider.setStateType(StateType.network);
-        } else {
-          _baseListProvider.setStateType(StateType.empty);
-        }
-      },
-      onError: (code, msg) {
-        _baseListProvider.setStateType(StateType.network);
-      },
-    );
-  }
-
-  Future _onRefresh() async {
-    _baseListProvider.clear();
-    this.getData();
+    _tabController = TabController(vsync: this, length: 2);
+    _pageController = PageController(initialPage: 0);
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = ThemeUtils.isDark(context);
     super.build(context);
-    return Scaffold(
-      body: SafeArea(
-          child: CustomScrollView(
-        slivers: [
-          SliverPersistentHeader(
-            // 属性同 SliverAppBar
+    return NestedScrollView(
+      headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+        return [
+          SliverAppBar(
+            forceElevated: innerBoxIsScrolled,
+            centerTitle: true,
+            elevation: 0,
+            floating: false,
             pinned: true,
-            floating: true,
-            // 因为 SliverPersistentHeaderDelegate 是一个抽象类，所以需要自定义
-            delegate: CustomSliverPersistentHeaderDelegate(
-              max: 50.0,
-              min: 0.0,
-              child: GestureDetector(
-                  child: Container(
-                    height: 50,
-                    margin: EdgeInsets.all(5),
-                    decoration: BoxDecoration(border: Border.all(color: Colors.black), borderRadius: BorderRadius.all(Radius.circular(5))),
-                    child: Center(
-                      child: Text("点击搜索影片",
-                          style: TextStyle(
-                            shadows: [Shadow(color: Colors.redAccent, offset: Offset(6, 3), blurRadius: 10)],
-                          )),
-                    ),
-                  ),
-                  onTap: () => NavigatorUtils.push(context, PlayerRouter.searchPage)),
-            ),
-          ),
-          SliverFillRemaining(
-            child: ChangeNotifierProvider<BaseListProvider<PlayerHot>>(
-                create: (_) => _baseListProvider,
-                child: Consumer<BaseListProvider<PlayerHot>>(builder: (_, _baseListProvider, __) {
-                  return DeerListView(
-                      itemCount: _baseListProvider.list.length,
-                      stateType: _baseListProvider.stateType,
-                      onRefresh: _onRefresh,
-                      pageSize: _baseListProvider.list.length,
-                      hasMore: _baseListProvider.hasMore,
-                      itemBuilder: (_, index) {
-                        return AnimationConfiguration.staggeredList(
-                          position: index,
-                          duration: const Duration(milliseconds: 375),
-                          child: SlideAnimation(
-                            verticalOffset: 50.0,
-                            child: FadeInAnimation(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    child: Text(
-                                      _baseListProvider.list[index].type,
-                                      style: TextStyle(
-                                        shadows: [Shadow(color: Colors.black, offset: Offset(6, 3), blurRadius: 10)],
-                                        decoration: TextDecoration.underline,
-                                        decorationColor: Colors.redAccent,
-                                        decorationStyle: TextDecorationStyle.solid,
-                                      ),
-                                    ),
-                                    padding: EdgeInsets.all(10),
-                                  ),
-                                  Container(
-                                    height: ScreenUtil.getInstance().getWidth(380),
-                                    child: GridView.builder(
-                                      //将所有子控件在父控件中填满
-                                      shrinkWrap: true,
-                                      //解决ListView嵌套GridView滑动冲突问题
-                                      physics: NeverScrollableScrollPhysics(),
-                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 3, //每行几列
-                                          childAspectRatio: 0.6),
-                                      itemCount: _baseListProvider.list[index].playlist.length,
-                                      itemBuilder: (context, i) {
-                                        //要返回的item样式
-                                        return InkWell(
-                                          child: Column(
-                                            children: [
-                                              Stack(
-                                                children: [
-                                                  LoadImage(
-                                                    _baseListProvider.list[index].playlist[i].cover,
-                                                    width: 110,
-                                                    height: 150,
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                  Positioned(
-                                                      bottom: 0,
-                                                      right: 0,
-                                                      child: Text(
-                                                        _baseListProvider.list[index].playlist[i].gengxin,
-                                                        style: TextStyle(fontSize: 14, color: Colors.white),
-                                                      ))
-                                                ],
-                                              ),
-                                              Container(
-                                                height: 50,
-                                                child: Text(
-                                                  _baseListProvider.list[index].playlist[i].title,
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              )
-                                            ],
-                                          ),
-                                          onTap: () {
-                                            if (_baseListProvider.list[index].playlist[i].gengxin == "预告") {
-                                              Toast.show("预告暂不支持播放!");
-                                            } else {
-                                              NavigatorUtils.push(context,
-                                                  '${PlayerRouter.detailPage}?url=${Uri.encodeComponent(_baseListProvider.list[index].playlist[i].url)}&title=${Uri.encodeComponent(_baseListProvider.list[index].playlist[i].title)}');
-                                            }
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  )
-                                ],
-                              ),
+            snap: false,
+            expandedHeight: ScreenUtil.getInstance().getWidth(150),
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              title: TabBar(
+                labelPadding: const EdgeInsets.symmetric(horizontal: 20),
+                controller: _tabController,
+                labelColor: Colours.red_selected_line,
+                unselectedLabelColor: Colours.text_gray,
+                labelStyle: TextStyles.textBold16,
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: Dimens.font_sp16,
+                  color: Colours.red_selected_line,
+                ),
+                indicatorSize: TabBarIndicatorSize.label,
+                indicatorColor: Colours.red_selected_line,
+                indicatorWeight: 1,
+                tabs: const <Widget>[
+                  Text("影视"),
+                  Text("直播"),
+                ],
+                onTap: (index) {
+                  if (!mounted) {
+                    return;
+                  }
+                  _pageController.animateToPage(index, duration: Duration(milliseconds: 300), curve: Curves.ease);
+                },
+              ),
+              background: Selector<PlayerProvider, List<SwiperList>>(
+                  builder: (_, list, __) {
+                    return list.length > 0
+                        ? Container(
+                            width: MediaQuery.of(context).size.width,
+                            child: Swiper(
+                              autoplay: true,
+                              itemBuilder: (BuildContext context, int index) {
+                                return LoadImage(
+                                  list[index].cover,
+                                  fit: BoxFit.cover,
+                                );
+                              },
+                              itemCount: list.length,
+                              pagination: SwiperPagination.fraction,
+                              onTap: (index) {
+                                String jsonString = jsonEncode(list[index]);
+                                NavigatorUtils.push(context, '${PlayerRouter.detailPage}?playerList=${Uri.encodeComponent(jsonString)}');
+                              },
                             ),
-                          ),
-                        );
-                      });
-                })),
-          )
-        ],
-      )),
+                          )
+                        : Container();
+                  },
+                  selector: (_, store) => store.swiperList),
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () {
+                    NavigatorUtils.push(context, PlayerRouter.searchPage);
+                  },
+                  child: Icon(
+                    Icons.search_sharp,
+                    color: Colours.text,
+                  ))
+            ],
+          ),
+        ];
+      },
+      body: Container(
+        color: isDark ? Colours.dark_bg_gray_ : Color(0xfff5f5f5),
+        child: PageView.builder(
+            key: const Key('pageView'),
+            itemCount: 2,
+            onPageChanged: _onPageChange,
+            controller: _pageController,
+            itemBuilder: (_, pageIndex) {
+              if (pageIndex == 0) {
+                return PlayerListPage();
+              }
+              return ZhiboListPage();
+            }),
+      ),
     );
+  }
+
+  _onPageChange(int index) async {
+    _tabController.animateTo(index);
   }
 }

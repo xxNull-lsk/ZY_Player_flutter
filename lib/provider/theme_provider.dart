@@ -1,21 +1,13 @@
 import 'dart:ui';
 
+import 'package:ZY_Player_flutter/common/common.dart';
+import 'package:ZY_Player_flutter/res/resources.dart';
 import 'package:flustars/flustars.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:ZY_Player_flutter/common/common.dart';
-import 'package:ZY_Player_flutter/res/resources.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const Map<ThemeMode, String> themes = {ThemeMode.dark: 'Dark', ThemeMode.light: 'Light', ThemeMode.system: 'System'};
-
-  bool _loadingState = false;
-  bool get loadingState => _loadingState;
-
-  void setloadingState(bool state) {
-    _loadingState = state;
-    notifyListeners();
-  }
 
   void syncTheme() {
     final String theme = SpUtil.getString(Constant.theme);

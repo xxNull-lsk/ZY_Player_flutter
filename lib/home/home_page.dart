@@ -1,23 +1,25 @@
 import 'package:ZY_Player_flutter/Collect/page/collect_page.dart';
-import 'package:ZY_Player_flutter/hotseach/page/hot_page.dart';
+import 'package:ZY_Player_flutter/home/provider/home_provider.dart';
 import 'package:ZY_Player_flutter/manhua/page/manhua_page.dart';
 import 'package:ZY_Player_flutter/net/dio_utils.dart';
 import 'package:ZY_Player_flutter/net/http_api.dart';
 import 'package:ZY_Player_flutter/player/page/player_page.dart';
+import 'package:ZY_Player_flutter/provider/app_state_provider.dart';
+import 'package:ZY_Player_flutter/res/resources.dart';
 import 'package:ZY_Player_flutter/util/device_utils.dart';
+import 'package:ZY_Player_flutter/util/double_tap_back_exit_app.dart';
 import 'package:ZY_Player_flutter/util/log_utils.dart';
+import 'package:ZY_Player_flutter/util/theme_utils.dart';
 import 'package:ZY_Player_flutter/util/toast.dart';
+import 'package:ZY_Player_flutter/utils/provider.dart';
+import 'package:ZY_Player_flutter/widgets/load_image.dart';
+import 'package:ZY_Player_flutter/xiaoshuo/page/shujia_page.dart';
 import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
-import 'package:ZY_Player_flutter/home/provider/home_provider.dart';
-import 'package:ZY_Player_flutter/res/resources.dart';
-import 'package:ZY_Player_flutter/util/double_tap_back_exit_app.dart';
-import 'package:ZY_Player_flutter/util/theme_utils.dart';
-import 'package:ZY_Player_flutter/widgets/load_image.dart';
+import 'package:flutter_update_dialog/flutter_update_dialog.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:package_info/package_info.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_update_dialog/flutter_update_dialog.dart';
 
 class Home extends StatefulWidget {
   @override
@@ -27,7 +29,7 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   List<Widget> _pageList;
 
-  final List<String> _appBarTitles = ['影视', '热搜', '动漫', '收藏'];
+  final List<String> _appBarTitles = ['影视', '小说', '动漫', '收藏'];
   final PageController _pageController = PageController();
 
   HomeProvider provider = HomeProvider();
@@ -52,6 +54,8 @@ class _HomeState extends State<Home> {
     }
     // 获得Player数据
     initData();
+    // 初始化投屏数据
+    Store.value<AppStateProvider>(context).initDlnaManager();
   }
 
   Future checkUpDate() async {
@@ -70,10 +74,10 @@ class _HomeState extends State<Home> {
           currentUpdateUrl = data["updateUrl"];
           currentVersion = data["appVersion"];
           currentUpdateText = data["updateText"];
-          String ignoreBb = SpUtil.getString("ignoreBb");
-          if (currentVersion != ignoreBb) {
-            openUpdateDiolog();
-          }
+          // String ignoreBb = SpUtil.getString("ignoreBb");
+          // if (currentVersion != ignoreBb) {
+          // }
+          openUpdateDiolog();
         }
       },
       onError: (code, msg) {},
@@ -97,30 +101,20 @@ class _HomeState extends State<Home> {
         themeColor: Color(0xFFFFAC5D),
         progressBackgroundColor: Color(0x5AFFAC5D),
         isForce: false,
-        enableIgnore: true,
+        enableIgnore: false,
         updateButtonText: '开始升级',
-        ignoreButtonText: '忽略此版本', onIgnore: () {
-      Log.d("忽略");
-      SpUtil.putString("ignoreBb", currentVersion);
-      dialog.dismiss();
-    }, onUpdate: tryOtaUpdate);
+        onUpdate: tryOtaUpdate);
   }
 
   Future tryOtaUpdate() async {
     try {
-      Toast.show("开始下载版本");
-      OtaUpdate()
-          .execute(
-        currentUpdateUrl,
-      )
-          .listen(
+      Toast.show("后台开始下载");
+      OtaUpdate().execute(currentUpdateUrl, destinationFilename: "虱子聚合.apk").listen(
         (OtaEvent event) {
           if (event.status == OtaStatus.DOWNLOADING) {
             dialog.update(double.parse(event.value) / 100);
           } else if (event.status == OtaStatus.INSTALLING) {
             Toast.show("升级成功");
-          } else if (event.status == OtaStatus.PERMISSION_NOT_GRANTED_ERROR) {
-            tryOtaUpdate();
           } else {
             Toast.show("升级失败，请从新下载");
             dialog.dismiss();
@@ -132,7 +126,6 @@ class _HomeState extends State<Home> {
       Toast.show("升级失败，请从新下载");
       dialog.dismiss();
       openUpdateDiolog();
-      print('Failed to make OTA update. Details: $e');
     }
   }
 
@@ -146,7 +139,7 @@ class _HomeState extends State<Home> {
   }
 
   void initData() {
-    _pageList = [PlayerPage(), HotPage(), ManhuaPage(), CollectPage()];
+    _pageList = [PlayerPage(), ShuJiaPage(), ManhuaPage(), CollectPage()];
   }
 
   List<BottomNavigationBarItem> _buildBottomNavigationBarItem() {
@@ -292,7 +285,8 @@ class _HomeState extends State<Home> {
                   unselectedFontSize: Dimens.font_sp10,
                   selectedItemColor: Theme.of(context).primaryColor,
                   unselectedItemColor: isDark ? Colours.dark_unselected_item_color : Colours.unselected_item_color,
-                  onTap: (index) => _pageController.jumpToPage(index),
+                  onTap: (index) =>
+                      _pageController.animateToPage(index, duration: Duration(milliseconds: 300), curve: Curves.ease),
                 );
               },
             ),

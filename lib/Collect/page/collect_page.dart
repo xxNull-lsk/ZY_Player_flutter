@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:ZY_Player_flutter/Collect/provider/collect_provider.dart';
 import 'package:ZY_Player_flutter/manhua/manhua_router.dart';
 import 'package:ZY_Player_flutter/player/player_router.dart';
@@ -6,6 +8,7 @@ import 'package:ZY_Player_flutter/res/dimens.dart';
 import 'package:ZY_Player_flutter/res/styles.dart';
 import 'package:ZY_Player_flutter/routes/fluro_navigator.dart';
 import 'package:ZY_Player_flutter/util/log_utils.dart';
+import 'package:ZY_Player_flutter/util/theme_utils.dart';
 import 'package:ZY_Player_flutter/utils/provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +22,8 @@ class CollectPage extends StatefulWidget {
   _CollectPageState createState() => _CollectPageState();
 }
 
-class _CollectPageState extends State<CollectPage> with AutomaticKeepAliveClientMixin<CollectPage>, SingleTickerProviderStateMixin {
+class _CollectPageState extends State<CollectPage>
+    with AutomaticKeepAliveClientMixin<CollectPage>, SingleTickerProviderStateMixin {
   @override
   bool get wantKeepAlive => true;
   TabController _tabController;
@@ -37,27 +41,37 @@ class _CollectPageState extends State<CollectPage> with AutomaticKeepAliveClient
   }
 
   Widget getData(data, int index) {
-    return ListTile(
-      title: Text(data.title),
-      subtitle: Text(data.leixing),
-      trailing: Icon(Icons.keyboard_arrow_right),
-      leading: LoadImage(
-        data.cover,
-        fit: BoxFit.cover,
+    return Card(
+      child: ListTile(
+        title: Text(data.title),
+        subtitle: index == 0 ? null : Text(data.leixing),
+        trailing: Icon(Icons.keyboard_arrow_right),
+        leading: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: LoadImage(
+            data.cover,
+            fit: BoxFit.fill,
+          ),
+        ),
+        onTap: () {
+          Log.d('前往详情页');
+          if (index == 0) {
+            String jsonString = jsonEncode(data);
+            NavigatorUtils.push(context, '${PlayerRouter.detailPage}?playerList=${Uri.encodeComponent(jsonString)}');
+          } else {
+            NavigatorUtils.push(context,
+                '${ManhuaRouter.detailPage}?url=${Uri.encodeComponent(data.url)}&title=${Uri.encodeComponent(data.title)}');
+          }
+        },
       ),
-      onTap: () {
-        Log.d('前往详情页');
-        if (index == 0) {
-          NavigatorUtils.push(context, '${PlayerRouter.detailPage}?url=${Uri.encodeComponent(data.url)}&title=${Uri.encodeComponent(data.title)}');
-        } else {
-          NavigatorUtils.push(context, '${ManhuaRouter.detailPage}?url=${Uri.encodeComponent(data.url)}&title=${Uri.encodeComponent(data.title)}');
-        }
-      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = ThemeUtils.isDark(context);
     super.build(context);
     return Scaffold(
       appBar: AppBar(
@@ -88,7 +102,7 @@ class _CollectPageState extends State<CollectPage> with AutomaticKeepAliveClient
         ),
       ),
       body: Container(
-        color: Color(0xfff5f5f5),
+        color: isDark ? Colours.dark_bg_gray_ : Color(0xfff5f5f5),
         child: PageView.builder(
             key: const Key('pageView'),
             itemCount: 2,

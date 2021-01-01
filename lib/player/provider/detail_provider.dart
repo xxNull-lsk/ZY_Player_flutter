@@ -1,14 +1,21 @@
 import 'package:ZY_Player_flutter/model/detail_reource.dart';
+import 'package:ZY_Player_flutter/model/player_hot.dart';
 import 'package:ZY_Player_flutter/widgets/state_layout.dart';
 import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
 
 class DetailProvider extends ChangeNotifier {
-  DetailReource _detailReource;
-  DetailReource get detailReource => _detailReource;
+  List<DetailReource> _detailReource = [];
+  List<DetailReource> get detailReource => _detailReource;
+
+  List<Playlist> _playerList;
+  List<Playlist> get playerList => _playerList;
 
   List<String> _kanguojuji = []; // 已经看过的剧集列表
   List<String> get kanguojuji => _kanguojuji;
+
+  List<String> _saveRecord = [];
+  List<String> get saveRecord => _saveRecord;
 
   bool _playState = false;
   bool get playState => _playState;
@@ -19,12 +26,20 @@ class DetailProvider extends ChangeNotifier {
   String _actionName = "";
   String get actionName => _actionName;
 
-  bool _isBuffering = false;
+  bool _isInitPlayer = false;
 
-  bool get isBuffering => _isBuffering;
+  bool get isInitPlayer => _isInitPlayer;
 
-  void setBufferState(bool state) {
-    _isBuffering = state;
+  int _chooseYuanIndex = 0;
+  int get chooseYuanIndex => _chooseYuanIndex;
+
+  void setChooseYuanIndex(int index) {
+    _chooseYuanIndex = index;
+    notifyListeners();
+  }
+
+  void setInitPlayer(bool state) {
+    _isInitPlayer = state;
     notifyListeners();
   }
 
@@ -45,6 +60,7 @@ class DetailProvider extends ChangeNotifier {
 
   setJuji() {
     _kanguojuji = SpUtil.getStringList("KGjuji", defValue: []);
+    _saveRecord = SpUtil.getStringList("saverecord", defValue: []);
   }
 
   saveJuji(String juji) {
@@ -55,8 +71,40 @@ class DetailProvider extends ChangeNotifier {
     }
   }
 
-  setDetailResource(DetailReource detailReourceData) {
-    _detailReource = detailReourceData;
+  saveRecordNof(String record) {
+    var index = -1;
+    for (var i = 0; i < _saveRecord.length; i++) {
+      var splitEle = _saveRecord[i].split("_");
+      var splitEle1 = record.split("_");
+      if (splitEle[0] == splitEle1[0] && splitEle[1] == splitEle1[1] && splitEle[2] == splitEle1[2]) {
+        index = i;
+        break;
+      }
+    }
+    if (index < 0) {
+      _saveRecord.add(record);
+      SpUtil.putStringList("saverecord", _saveRecord);
+    } else {
+      _saveRecord[index] = record;
+      SpUtil.putStringList("saverecord", _saveRecord);
+    }
+  }
+
+  String getRecord(String playerList) {
+    var record;
+    for (var i = 0; i < _saveRecord.length; i++) {
+      var splitEle = _saveRecord[i].split("_");
+      var splitEle1 = playerList.split("_");
+      if (splitEle[0] == splitEle1[0] && splitEle[1] == splitEle1[1] && splitEle[2] == splitEle1[2]) {
+        record = splitEle[3];
+        break;
+      }
+    }
+    return record;
+  }
+
+  addDetailResource(DetailReource detailReourceData) {
+    _detailReource.add(detailReourceData);
     notifyListeners();
   }
 }
